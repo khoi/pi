@@ -14,6 +14,7 @@ Included resources:
 
 - `extensions/ask_user_question`
 - `extensions/codex-fast-mode`
+- `extensions/openai-native-web-search`
 - `extensions/status-line`
 - `skills/execplan`
 - `themes/zenbones-dark.json`
