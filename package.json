@@ -8,8 +8,7 @@
   ],
   "pi": {
     "extensions": [
-      "./extensions",
-      "./node_modules/@anthnykr/pi-codex-fast-mode/src/index.ts"
+      "./extensions"
     ],
     "skills": [
       "./skills"
@@ -18,12 +17,6 @@
       "./themes"
     ]
   },
-  "dependencies": {
-    "@anthnykr/pi-codex-fast-mode": "^0.1.1"
-  },
-  "bundledDependencies": [
-    "@anthnykr/pi-codex-fast-mode"
-  ],
   "peerDependencies": {
     "@mariozechner/pi-ai": "*",
     "@mariozechner/pi-coding-agent": "*",
