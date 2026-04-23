@@ -8,7 +8,7 @@ Install:
 pi install git:github.com/khoi/pi
 ```
 
-This repo intentionally uses Pi's conventional package directories instead of a `package.json` manifest.
+This repo uses a `package.json` Pi manifest so one install can combine local resources with npm Pi packages.
 
 Included resources:
 
@@ -17,3 +17,4 @@ Included resources:
 - `skills/execplan`
 - `themes/zenbones-dark.json`
 - `themes/zenbones-light.json`
+- `@anthnykr/pi-codex-fast-mode`

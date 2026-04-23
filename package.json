@@ -1,0 +1,33 @@
+{
+  "name": "khoi-pi",
+  "version": "0.1.0",
+  "description": "Personal Pi package",
+  "type": "module",
+  "keywords": [
+    "pi-package"
+  ],
+  "pi": {
+    "extensions": [
+      "./extensions",
+      "./node_modules/@anthnykr/pi-codex-fast-mode/src/index.ts"
+    ],
+    "skills": [
+      "./skills"
+    ],
+    "themes": [
+      "./themes"
+    ]
+  },
+  "dependencies": {
+    "@anthnykr/pi-codex-fast-mode": "^0.1.1"
+  },
+  "bundledDependencies": [
+    "@anthnykr/pi-codex-fast-mode"
+  ],
+  "peerDependencies": {
+    "@mariozechner/pi-ai": "*",
+    "@mariozechner/pi-coding-agent": "*",
+    "@mariozechner/pi-tui": "*",
+    "@sinclair/typebox": "*"
+  }
+}
