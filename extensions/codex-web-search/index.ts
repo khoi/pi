@@ -8,6 +8,8 @@ import { Text } from "@mariozechner/pi-tui";
 import { Type } from "@sinclair/typebox";
 import { executeCodexWebSearch } from "./codex.ts";
 import {
+  DEFAULT_SEARCH_MODEL,
+  DEFAULT_SEARCH_REASONING_EFFORT,
   MAX_ALLOWED_SOURCES,
   MAX_QUERY_BUDGET,
   MAX_TIMEOUT_MS,
@@ -24,6 +26,7 @@ import {
 } from "./settings.ts";
 import type {
   CodexFailureDetails,
+  CodexReasoningEffort,
   CodexWebSearchDetails,
   DefuddleMode,
   ExecuteCodexWebSearchOptions,
@@ -38,6 +41,8 @@ import type {
 const SETTINGS_ARGUMENT_OPTIONS = [
   "status",
   "reset",
+  `model ${DEFAULT_SEARCH_MODEL}`,
+  `reasoning-effort ${DEFAULT_SEARCH_REASONING_EFFORT}`,
   "default-mode fast",
   "default-mode deep",
   "fast-freshness cached",
@@ -221,7 +226,7 @@ export default function codexWebSearchExtension(pi: ExtensionAPI) {
 
   pi.registerCommand(SETTINGS_COMMAND, {
     description:
-      "Configure defaults, budgets, timeouts, and Defuddle behavior for the web_search tool",
+      "Configure Codex model, reasoning effort, defaults, budgets, timeouts, and Defuddle behavior for the web_search tool",
     getArgumentCompletions: (prefix) => {
       const lowerPrefix = prefix.toLowerCase();
       const matches = SETTINGS_ARGUMENT_OPTIONS.filter((option) => option.startsWith(lowerPrefix));
@@ -257,6 +262,20 @@ async function handleSettingsCommand(args: string, ctx: ExtensionCommandContext)
       case "reset": {
         const saved = await saveSettings(DEFAULT_WEB_SEARCH_SETTINGS);
         notify(ctx, `Web search settings reset.\n\n${formatSettings(saved)}`);
+        return;
+      }
+
+      case "model": {
+        const model = parseModel(value);
+        const saved = await saveSettings({ ...settings, model });
+        notify(ctx, `Search model updated to ${saved.model}.`);
+        return;
+      }
+
+      case "reasoning-effort": {
+        const reasoningEffort = parseReasoningEffort(value);
+        const saved = await saveSettings({ ...settings, reasoningEffort });
+        notify(ctx, `Search reasoning effort updated to ${saved.reasoningEffort}.`);
         return;
       }
 
@@ -363,6 +382,7 @@ async function openSettingsDialog(ctx: ExtensionCommandContext): Promise<void> {
       "Web search settings\nChoose a group. Saved values apply when the tool call omits overrides.",
       [
         "Show current settings",
+        `Codex execution → ${settings.model} / ${settings.reasoningEffort}`,
         `Search defaults → mode ${settings.defaultMode}, fast ${settings.fastFreshness}/${settings.fastMaxSources}, deep ${settings.deepFreshness}/${settings.deepMaxSources}`,
         `Defuddle behavior → ${settings.defuddleMode}`,
         `Timeouts → fast ${settings.fastTimeoutMs} ms, deep ${settings.deepTimeoutMs} ms, Defuddle ${settings.defuddleTimeoutMs} ms`,
@@ -375,6 +395,11 @@ async function openSettingsDialog(ctx: ExtensionCommandContext): Promise<void> {
 
     if (choice === "Show current settings") {
       await handleSettingsCommand("status", ctx);
+      continue;
+    }
+
+    if (choice.startsWith("Codex execution")) {
+      await openCodexExecutionSettingsDialog(ctx);
       continue;
     }
 
@@ -401,6 +426,52 @@ async function openSettingsDialog(ctx: ExtensionCommandContext): Promise<void> {
     if (choice === "Reset to defaults") {
       await handleSettingsCommand("reset", ctx);
     }
+  }
+}
+
+async function openCodexExecutionSettingsDialog(ctx: ExtensionCommandContext): Promise<void> {
+  while (true) {
+    const settings = await loadSettings();
+    const choice = await ctx.ui.select(
+      "Codex execution\nControls which Codex model handles web search and how much reasoning it uses.",
+      [
+        `Model → ${settings.model}`,
+        `Reasoning effort → ${settings.reasoningEffort}`,
+        "Back",
+      ]
+    );
+
+    if (!choice || choice === "Back") return;
+
+    if (choice.startsWith("Model")) {
+      const value = await ctx.ui.input(
+        "Search model\nModel id passed to codex exec for web search.",
+        settings.model
+      );
+      if (!value) continue;
+      await handleSettingsCommand(`model ${value}`, ctx);
+      continue;
+    }
+
+    const reasoningEffort = await ctx.ui.select(
+      "Reasoning effort\nPassed to codex exec as model_reasoning_effort.",
+      [
+        "low — fastest search synthesis",
+        "medium — balanced",
+        "high — more reasoning",
+        "xhigh — maximum reasoning",
+      ]
+    );
+    if (!reasoningEffort) continue;
+
+    const nextReasoningEffort = reasoningEffort.startsWith("low")
+      ? "low"
+      : reasoningEffort.startsWith("medium")
+        ? "medium"
+        : reasoningEffort.startsWith("high")
+          ? "high"
+          : "xhigh";
+    await handleSettingsCommand(`reasoning-effort ${nextReasoningEffort}`, ctx);
   }
 }
 
@@ -597,6 +668,10 @@ function buildSettingsHelp(settings: WebSearchSettings): string {
     formatSettings(settings),
     "",
     "Commands:",
+    "Codex execution:",
+    `/${SETTINGS_COMMAND} model <model-id>`,
+    `/${SETTINGS_COMMAND} reasoning-effort <low|medium|high|xhigh>`,
+    "",
     "Search defaults:",
     `/${SETTINGS_COMMAND} default-mode <fast|deep>`,
     `/${SETTINGS_COMMAND} fast-freshness <cached|live>`,
@@ -631,6 +706,14 @@ function splitArgs(args: string): [string, string] {
   return [trimmed.slice(0, separatorIndex), trimmed.slice(separatorIndex + 1).trim()];
 }
 
+function parseModel(value: string): string {
+  const model = value.trim();
+  if (!model) {
+    throw new Error("Invalid model: expected a non-empty model id.");
+  }
+  return model;
+}
+
 function parseMode(value: string): SearchMode {
   if (value === "fast" || value === "deep") {
     return value;
@@ -650,6 +733,15 @@ function parseDefuddleMode(value: string): DefuddleMode {
     return value;
   }
   throw new Error(`Invalid Defuddle mode: ${value}. Expected off, direct, fallback, or both.`);
+}
+
+function parseReasoningEffort(value: string): CodexReasoningEffort {
+  if (value === "low" || value === "medium" || value === "high" || value === "xhigh") {
+    return value;
+  }
+  throw new Error(
+    `Invalid reasoning effort: ${value}. Expected low, medium, high, or xhigh.`
+  );
 }
 
 function parseTimeoutMs(value: string, label: string): number {

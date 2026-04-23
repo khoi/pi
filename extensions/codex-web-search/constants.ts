@@ -1,5 +1,7 @@
 export const TOOL_NAME = "web_search";
 export const SETTINGS_COMMAND = "codex-web-search-settings";
+export const DEFAULT_SEARCH_MODEL = "gpt-5.3-codex-spark";
+export const DEFAULT_SEARCH_REASONING_EFFORT = "low";
 
 export const DEFAULT_FAST_MAX_SOURCES = 5;
 export const DEFAULT_DEEP_MAX_SOURCES = 5;

@@ -277,11 +277,17 @@ function isLikelyDocumentationQuery(query: string): boolean {
 
 export function buildCodexExecArgs(
   paths: { schemaPath: string; outputPath: string },
-  freshness: SearchFreshness
+  freshness: SearchFreshness,
+  model: string,
+  reasoningEffort: WebSearchSettings["reasoningEffort"]
 ): string[] {
   return [
     "exec",
     "--json",
+    "-m",
+    model,
+    "-c",
+    `model_reasoning_effort=\"${reasoningEffort}\"`,
     "-c",
     `web_search=\"${freshness}\"`,
     "--skip-git-repo-check",
@@ -537,7 +543,12 @@ async function runResolvedCodexWebSearch(
 
   try {
     const runnerOptions: RunCodexCommandOptions = {
-      args: buildCodexExecArgs({ schemaPath: SEARCH_OUTPUT_SCHEMA_PATH, outputPath }, freshness),
+      args: buildCodexExecArgs(
+        { schemaPath: SEARCH_OUTPUT_SCHEMA_PATH, outputPath },
+        freshness,
+        settings.model,
+        settings.reasoningEffort
+      ),
       cwd: options.cwd,
       stdin: buildCodexPrompt({ query, maxSources, mode }, { queryBudget: policy.queryBudget }),
       timeoutMs: policy.timeoutMs,

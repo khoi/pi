@@ -3,6 +3,7 @@ import type { AgentToolUpdateCallback } from "@mariozechner/pi-coding-agent";
 export type SearchMode = "fast" | "deep";
 export type SearchFreshness = "cached" | "live";
 export type DefuddleMode = "off" | "direct" | "fallback" | "both";
+export type CodexReasoningEffort = "low" | "medium" | "high" | "xhigh";
 export type CodexFailureKind =
   | "transport"
   | "auth"
@@ -77,6 +78,8 @@ export interface CodexWebSearchDetails extends WebSearchProgressDetails {
 }
 
 export interface WebSearchSettings {
+  model: string;
+  reasoningEffort: CodexReasoningEffort;
   defaultMode: SearchMode;
   fastFreshness: SearchFreshness;
   deepFreshness: SearchFreshness;

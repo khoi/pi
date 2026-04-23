@@ -6,6 +6,8 @@ import {
   DEEP_SEARCH_TIMEOUT_MS,
   DEFAULT_DEEP_MAX_SOURCES,
   DEFAULT_FAST_MAX_SOURCES,
+  DEFAULT_SEARCH_MODEL,
+  DEFAULT_SEARCH_REASONING_EFFORT,
   DEFUDDLE_TIMEOUT_MS,
   FAST_SEARCH_QUERY_BUDGET,
   FAST_SEARCH_TIMEOUT_MS,
@@ -15,9 +17,17 @@ import {
   MIN_QUERY_BUDGET,
   MIN_TIMEOUT_MS,
 } from "./constants.ts";
-import type { DefuddleMode, SearchFreshness, SearchMode, WebSearchSettings } from "./types.ts";
+import type {
+  CodexReasoningEffort,
+  DefuddleMode,
+  SearchFreshness,
+  SearchMode,
+  WebSearchSettings,
+} from "./types.ts";
 
 export const DEFAULT_WEB_SEARCH_SETTINGS: WebSearchSettings = {
+  model: DEFAULT_SEARCH_MODEL,
+  reasoningEffort: DEFAULT_SEARCH_REASONING_EFFORT,
   defaultMode: "fast",
   fastFreshness: "cached",
   deepFreshness: "live",
@@ -60,6 +70,10 @@ export async function saveSettings(
 export function formatSettings(settings: WebSearchSettings): string {
   return [
     `Stored in ${SETTINGS_PATH} under \"${SETTINGS_KEY}\".`,
+    "",
+    "Codex execution:",
+    `  Model: ${settings.model}`,
+    `  Reasoning effort: ${settings.reasoningEffort}`,
     "",
     "Search defaults:",
     `  Default mode: ${settings.defaultMode}`,
@@ -109,6 +123,8 @@ async function saveRootSettings(settings: RootSettings, path: string): Promise<v
 export function normalizeSettings(value: unknown): WebSearchSettings {
   const candidate = value && typeof value === "object" ? value : {};
   const typedCandidate = candidate as {
+    model?: unknown;
+    reasoningEffort?: unknown;
     defaultMode?: unknown;
     fastFreshness?: unknown;
     deepFreshness?: unknown;
@@ -129,6 +145,11 @@ export function normalizeSettings(value: unknown): WebSearchSettings {
   );
 
   return {
+    model: asNonEmptyString(typedCandidate.model, DEFAULT_WEB_SEARCH_SETTINGS.model),
+    reasoningEffort: asReasoningEffort(
+      typedCandidate.reasoningEffort,
+      DEFAULT_WEB_SEARCH_SETTINGS.reasoningEffort
+    ),
     defaultMode: asMode(typedCandidate.defaultMode, DEFAULT_WEB_SEARCH_SETTINGS.defaultMode),
     fastFreshness: asFreshness(
       typedCandidate.fastFreshness,
@@ -206,6 +227,24 @@ function asDefuddleMode(value: unknown, fallback: DefuddleMode): DefuddleMode {
   return value === "off" || value === "direct" || value === "fallback" || value === "both"
     ? value
     : fallback;
+}
+
+function asReasoningEffort(
+  value: unknown,
+  fallback: CodexReasoningEffort
+): CodexReasoningEffort {
+  return value === "low" || value === "medium" || value === "high" || value === "xhigh"
+    ? value
+    : fallback;
+}
+
+function asNonEmptyString(value: unknown, fallback: string): string {
+  if (typeof value !== "string") {
+    return fallback;
+  }
+
+  const normalized = value.trim();
+  return normalized ? normalized : fallback;
 }
 
 function asOptionalIntegerInRange(value: unknown, min: number, max: number): number | undefined {
