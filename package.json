@@ -24,6 +24,6 @@
     "@sinclair/typebox": "*"
   },
   "dependencies": {
-    "pi-codex-web-search": "^0.1.8"
+    "defuddle": "^0.14.0"
   }
 }

@@ -20,4 +20,4 @@ Included resources:
 - `themes/zenbones-dark.json`
 - `themes/zenbones-light.json`
 
-`extensions/codex-web-search` shells out to the local `codex` CLI for web search and expects an authenticated Codex session.
+`extensions/codex-web-search` shells out to the local `codex` CLI for web search and expects an authenticated Codex session. Settings live in `~/.pi/agent/settings.json` under the `"codex-web-search"` key and are managed via `/codex-web-search-settings`.
