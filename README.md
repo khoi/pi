@@ -14,7 +14,10 @@ Included resources:
 
 - `extensions/ask_user_question`
 - `extensions/codex-fast-mode`
+- `extensions/codex-web-search`
 - `extensions/status-line`
 - `skills/execplan`
 - `themes/zenbones-dark.json`
 - `themes/zenbones-light.json`
+
+`extensions/codex-web-search` shells out to the local `codex` CLI for web search and expects an authenticated Codex session.

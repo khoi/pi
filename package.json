@@ -22,5 +22,8 @@
     "@mariozechner/pi-coding-agent": "*",
     "@mariozechner/pi-tui": "*",
     "@sinclair/typebox": "*"
+  },
+  "dependencies": {
+    "pi-codex-web-search": "^0.1.8"
   }
 }
