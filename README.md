@@ -12,7 +12,7 @@ This repo uses a `package.json` Pi manifest so one install can expose local Pi r
 
 Included resources:
 
-- `extensions/ask`
+- `extensions/ask_user_question`
 - `extensions/codex-fast-mode`
 - `extensions/status-line`
 - `skills/execplan`

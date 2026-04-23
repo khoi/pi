@@ -1,16 +1,16 @@
-# ask extension
+# ask_user_question extension
 
 Project-local pi extension for structured clarification prompts inside pi.
 
 ## Features
 
-- one `ask` tool for single or multi-question prompts
+- one `ask_user_question` tool for single or multi-question prompts
 - first-class `select`, `text`, and `textarea` question types
 - optional `multi: true` for multi-select answers on `select` questions
 - optional `recommended` index to highlight the suggested choice
 - automatic `Other (type your own)` option for `select` questions unless disabled
 - `/answer` command that extracts questions from the last assistant message, opens the same guided UI, and sends the answers back as a user message
-- project-local auto-discovery from `.pi/extensions/ask/index.ts`
+- project-local auto-discovery from `.pi/extensions/ask_user_question/index.ts`
 
 ## Tool schema
 
@@ -45,5 +45,5 @@ Project-local pi extension for structured clarification prompts inside pi.
 - `type` defaults to `select` when `options` are present, otherwise `text`.
 - Do not include your own `Other` option unless you set `allowOther: false`.
 - `value` for an option defaults to `label` when omitted.
-- Use one `ask` call with multiple related questions instead of chaining many single-question prompts.
+- Use one `ask_user_question` call with multiple related questions instead of chaining many single-question prompts.
 - The extension is intended for interactive pi sessions.

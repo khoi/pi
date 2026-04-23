@@ -642,7 +642,7 @@ export async function runAskPrompt(ctx: ExtensionContext, questions: AskQuestion
 
 export function renderAskCall(args: { questions?: AskQuestionInput[] }, theme: { fg: (color: string, text: string) => string; bold: (text: string) => string }) {
 	const questions = (args.questions || []).map((question, index) => question.label || question.id || `Q${index + 1}`);
-	let text = theme.fg("toolTitle", theme.bold("ask "));
+	let text = theme.fg("toolTitle", theme.bold("ask_user_question "));
 	text += theme.fg("muted", `${questions.length} question${questions.length === 1 ? "" : "s"}`);
 	if (questions.length > 0) {
 		text += theme.fg("dim", ` (${truncateToWidth(questions.join(", "), 40)})`);

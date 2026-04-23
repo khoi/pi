@@ -29,20 +29,20 @@ const AskQuestionSchema = Type.Object({
 
 const AskParamsSchema = Type.Object({
 	questions: Type.Array(AskQuestionSchema, {
-		description: "Questions to ask. Prefer a single ask call with all related questions.",
+		description: "Questions to ask. Prefer a single ask_user_question call with all related questions.",
 	}),
 });
 
-export default function ask(pi: ExtensionAPI) {
+export default function ask_user_question(pi: ExtensionAPI) {
 	pi.registerTool({
-		name: "ask",
-		label: "Ask",
+		name: "ask_user_question",
+		label: "Ask User Question",
 		description:
 			"Ask the user one or more structured questions with select, multi-select, text, or textarea answers. Use this for clarifying requirements, preferences, and constraints.",
 		promptSnippet: "Ask the user structured follow-up questions with select, multi-select, text, or textarea answers.",
 		promptGuidelines: [
 			"Use this tool when a tight multiple-choice or short free-text clarification would unblock work.",
-			"Prefer one ask call with multiple related questions instead of chaining several separate clarifications.",
+			"Prefer one ask_user_question call with multiple related questions instead of chaining several separate clarifications.",
 			"Do not include your own Other option for select questions unless you explicitly disable the built-in one.",
 		],
 		parameters: AskParamsSchema,
@@ -58,7 +58,7 @@ export default function ask(pi: ExtensionAPI) {
 			try {
 				questions = normalizeQuestions(params.questions as AskQuestionInput[]);
 			} catch (error) {
-				return errorResult(error instanceof Error ? error.message : "Error: Invalid ask payload");
+				return errorResult(error instanceof Error ? error.message : "Error: Invalid ask_user_question payload");
 			}
 
 			const result = await runAskPrompt(ctx, questions);
