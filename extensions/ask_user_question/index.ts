@@ -1,6 +1,6 @@
 import { StringEnum } from "@mariozechner/pi-ai";
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
-import { Type } from "@sinclair/typebox";
+import { Type } from "typebox";
 import { registerAnswerCommand } from "./answer.ts";
 import { errorResult, formatToolResult, normalizeQuestions, renderAskCall, renderAskResult, runAskPrompt } from "./run-ask.ts";
 import type { AskQuestionInput, AskResult } from "./types.ts";

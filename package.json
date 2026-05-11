@@ -8,7 +8,10 @@
   ],
   "pi": {
     "extensions": [
-      "./extensions"
+      "./extensions/ask_user_question/index.ts",
+      "./extensions/codex-fast-mode/index.ts",
+      "./extensions/status-line/index.ts",
+      "./node_modules/@howaboua/pi-codex-conversion/src/index.ts"
     ],
     "skills": [
       "./skills"
@@ -18,12 +21,12 @@
     ]
   },
   "peerDependencies": {
-    "@mariozechner/pi-ai": "*",
-    "@mariozechner/pi-coding-agent": "*",
-    "@mariozechner/pi-tui": "*",
-    "@sinclair/typebox": "*"
+    "@mariozechner/pi-ai": "^0.73.0",
+    "@mariozechner/pi-coding-agent": "^0.73.0",
+    "@mariozechner/pi-tui": "^0.73.0",
+    "typebox": "^1.1.24"
   },
   "dependencies": {
-    "defuddle": "^0.14.0"
+    "@howaboua/pi-codex-conversion": "git+https://github.com/IgorWarzocha/pi-codex-conversion.git#3a3bbc9"
   }
 }

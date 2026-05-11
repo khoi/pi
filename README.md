@@ -14,10 +14,10 @@ Included resources:
 
 - `extensions/ask_user_question`
 - `extensions/codex-fast-mode`
-- `extensions/codex-web-search`
 - `extensions/status-line`
+- `@howaboua/pi-codex-conversion`
 - `skills/execplan`
 - `themes/zenbones-dark.json`
 - `themes/zenbones-light.json`
 
-`extensions/codex-web-search` shells out to the local `codex` CLI for web search and expects an authenticated Codex session. Settings live in `~/.pi/agent/settings.json` under the `"codex-web-search"` key and are managed via `/codex-web-search-settings`. By default it runs searches with `gpt-5.3-codex-spark` and `low` reasoning effort, both configurable in the search settings.
+`@howaboua/pi-codex-conversion` replaces the local Codex web-search extension with a Codex-style adapter. On OpenAI GPT/Codex models it swaps in `exec_command`, `write_stdin`, `apply_patch`, native `web_search`, optional native `image_generation`, and `view_image`.
