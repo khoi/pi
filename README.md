@@ -14,6 +14,7 @@ Included resources:
 
 - `extensions/ask_user_question`
 - `extensions/codex-fast-mode`
+- `extensions/system-theme`
 - `extensions/status-line`
 - `@howaboua/pi-codex-conversion`
 - `skills/execplan`
@@ -21,3 +22,5 @@ Included resources:
 - `themes/zenbones-light.json`
 
 `@howaboua/pi-codex-conversion` replaces the local Codex web-search extension with a Codex-style adapter. On OpenAI GPT/Codex models it swaps in `exec_command`, `write_stdin`, `apply_patch`, native `web_search`, optional native `image_generation`, and `view_image`.
+
+`extensions/system-theme` tracks macOS dark mode and switches between `zenbones-dark` and `zenbones-light`.

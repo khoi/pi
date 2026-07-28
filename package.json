@@ -10,6 +10,7 @@
     "extensions": [
       "./extensions/ask_user_question/index.ts",
       "./extensions/codex-fast-mode/index.ts",
+      "./extensions/system-theme/index.ts",
       "./extensions/status-line/index.ts",
       "./node_modules/@howaboua/pi-codex-conversion/src/index.ts"
     ],
