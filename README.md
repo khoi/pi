@@ -22,6 +22,4 @@ Included resources:
 
 `extensions/system-theme` tracks macOS dark mode and switches between `zenbones-dark` and `zenbones-light`.
 
-`extensions/minimal-ui` reduces UI noise using only public Pi APIs: a compact status footer (directory, git branch, model, context usage, cost, tool success/failure counts, working spinner) and one-line renderers for the built-in read/bash/edit/write/grep/find/ls tools (full output still available via ctrl+o). No prototype patches, no rendered-ANSI rewriting.
-
-Its `bash` tool also accepts `usePTY=true`: the command runs in a PTY (via node-pty + xterm headless, ported from [pi-bash-live-view](https://github.com/lucasmeijer/pi-bash-live-view)) with a live terminal widget while it runs — useful for build systems with rich progress output. Interactive `!`/`!!` commands route through the same PTY path.
+`extensions/minimal-ui` reduces UI noise using only public Pi APIs: a status widget above the editor (directory, git branch, tool success/failure counts, working spinner), a model/thinking-level widget below, an empty footer, and one-line renderers for the built-in read/bash/edit/write/grep/find/ls tools (full output still available via ctrl+o). No prototype patches, no rendered-ANSI rewriting.

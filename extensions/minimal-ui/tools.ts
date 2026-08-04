@@ -1,4 +1,5 @@
 import {
+	createBashToolDefinition,
 	createEditToolDefinition,
 	createFindToolDefinition,
 	createGrepToolDefinition,
@@ -13,8 +14,6 @@ import {
 } from "@earendil-works/pi-coding-agent";
 import { Container, Text, truncateToWidth, type Component } from "@earendil-works/pi-tui";
 import type { Static, TSchema } from "typebox";
-
-import { createPtyBashToolDefinition, registerUserBashPty } from "./pty-bash.js";
 
 const unsafeTerminalCharacters = /[\u0000-\u001f\u007f-\u009f\u202a-\u202e\u2066-\u2069]/g;
 const sanitize = (text: string): string => text.replace(unsafeTerminalCharacters, "");
@@ -174,18 +173,12 @@ export function registerCompactTools(pi: ExtensionAPI): void {
 		},
 	});
 
-	registerCompactTool(pi, createPtyBashToolDefinition, {
-		call: (args) => {
-			const meta = [
-				args.timeout !== undefined ? `timeout ${args.timeout}s` : "",
-				args.usePTY === true ? "pty" : "",
-			]
-				.filter(Boolean)
-				.join(" ");
-			return { subject: compactText(args.command), ...(meta ? { meta } : {}) };
-		},
+	registerCompactTool(pi, createBashToolDefinition, {
+		call: (args) => ({
+			subject: compactText(args.command),
+			...(args.timeout !== undefined ? { meta: `timeout ${args.timeout}s` } : {}),
+		}),
 	});
-	registerUserBashPty(pi);
 
 	registerCompactTool(pi, createEditToolDefinition, {
 		call: (args) => ({
