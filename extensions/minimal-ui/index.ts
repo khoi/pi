@@ -1,7 +1,7 @@
 import { basename } from "node:path";
 
-import { CustomEditor, type ExtensionAPI, type Theme } from "@earendil-works/pi-coding-agent";
-import type { Component, TUI } from "@earendil-works/pi-tui";
+import { CustomEditor, type ExtensionAPI, type KeybindingsManager, type Theme } from "@earendil-works/pi-coding-agent";
+import type { Component, EditorTheme, TUI } from "@earendil-works/pi-tui";
 import { truncateToWidth } from "@earendil-works/pi-tui";
 
 import { registerCompactTools } from "./tools.js";
@@ -32,6 +32,28 @@ class EmptyFooter implements Component {
 	}
 
 	invalidate(): void {}
+}
+
+class PromptEditor extends CustomEditor {
+	constructor(
+		tui: TUI,
+		theme: EditorTheme,
+		keybindings: KeybindingsManager,
+		private promptColor: (str: string) => string,
+	) {
+		super(tui, theme, keybindings, { paddingX: 2 });
+	}
+
+	override render(width: number): string[] {
+		const lines = super.render(width);
+		const paddingX = this.getPaddingX();
+		let prompted = false;
+		return lines.map((line) => {
+			if (prompted || !line.startsWith(" ".repeat(paddingX))) return line;
+			prompted = true;
+			return this.promptColor(">") + line.slice(1);
+		});
+	}
 }
 
 export default function minimalUi(pi: ExtensionAPI) {
@@ -136,7 +158,7 @@ export default function minimalUi(pi: ExtensionAPI) {
 				instance.terminal.clearScreen();
 				instance.requestRender(true);
 			}
-			return new CustomEditor(instance, editorTheme, keybindings, { paddingX: 2 });
+			return new PromptEditor(instance, editorTheme, keybindings, (str) => editorTheme.borderColor(str));
 		});
 
 		pi.on("agent_start", () => {
