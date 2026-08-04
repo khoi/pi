@@ -9,8 +9,7 @@
   "pi": {
     "extensions": [
       "./extensions/ask_user_question/index.ts",
-      "./extensions/system-theme/index.ts",
-      "./extensions/status-line/index.ts"
+      "./extensions/system-theme/index.ts"
     ],
     "skills": [
       "./skills"

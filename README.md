@@ -15,7 +15,6 @@ Included resources:
 
 - `extensions/ask_user_question`
 - `extensions/system-theme`
-- `extensions/status-line`
 - `themes/zenbones-dark.json`
 - `themes/zenbones-light.json`
 
