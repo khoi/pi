@@ -9,6 +9,7 @@ import {
 	type AgentToolResult,
 	type EditToolDetails,
 	type ExtensionAPI,
+	keyText,
 	type Theme,
 	type ToolDefinition,
 } from "@earendil-works/pi-coding-agent";
@@ -27,10 +28,13 @@ interface CompactToolState {
 	line?: SingleLine;
 }
 
+const COLLAPSED_PEEK_LINES = 3;
+
 interface CompactRenderer<TParams extends TSchema, TDetails> {
 	call: (args: Static<TParams>) => CompactCall;
 	summary?: (result: AgentToolResult<TDetails>, args: Static<TParams>) => string | undefined;
 	expanded?: (result: AgentToolResult<TDetails>, args: Static<TParams>, isError: boolean) => string;
+	peek?: boolean;
 }
 
 type ToolFactory<TParams extends TSchema, TDetails, TState> = (
@@ -88,6 +92,17 @@ function styleOutput(text: string, theme: Theme, isError: boolean): string {
 		.join("\n");
 }
 
+function renderPeek(output: string, theme: Theme, isError: boolean): string {
+	const lines = output.split("\n");
+	const hidden = lines.length - COLLAPSED_PEEK_LINES;
+	if (hidden <= 0) return styleOutput(output, theme, isError);
+	const shown = lines.slice(0, COLLAPSED_PEEK_LINES);
+	const gutter = theme.fg("dim", "│ ");
+	const color = isError ? "error" : "toolOutput";
+	const preview = shown.map((line) => `${gutter}${theme.fg(color, line)}`).join("\n");
+	return `${preview}\n${gutter}${theme.fg("dim", `… +${hidden} lines`)}`;
+}
+
 function renderLine(
 	name: string,
 	call: CompactCall,
@@ -141,9 +156,14 @@ function registerCompactTool<TParams extends TSchema, TDetails, TState>(
 				),
 			);
 
-			if (!expanded) return new Container();
 			const output = renderer.expanded?.(result, context.args, context.isError) ?? expandedText(result);
-			return output ? new Text(styleOutput(output, theme, context.isError), 0, 0) : new Container();
+			if (!output) return new Container();
+			if (expanded) return new Text(styleOutput(output, theme, context.isError), 0, 0);
+			if (renderer.peek) return new Text(renderPeek(output, theme, context.isError), 0, 0);
+			const hidden = lineCount(output);
+			if (hidden === 0) return new Container();
+			const hint = `└ … +${hidden} lines (ctrl + ${keyText("app.tools.expand")} to view transcript)`;
+			return new Text(theme.fg("dim", hint), 0, 0);
 		},
 	});
 }
@@ -178,6 +198,7 @@ export function registerCompactTools(pi: ExtensionAPI): void {
 			subject: compactText(args.command),
 			...(args.timeout !== undefined ? { meta: `timeout ${args.timeout}s` } : {}),
 		}),
+		peek: true,
 	});
 
 	registerCompactTool(pi, createEditToolDefinition, {
