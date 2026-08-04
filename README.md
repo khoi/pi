@@ -6,6 +6,7 @@ Install:
 
 ```bash
 pi install git:github.com/khoi/pi
+pi -e . # to quickly test it out locally
 ```
 
 This repo uses a `package.json` Pi manifest so one install can expose local Pi resources.
