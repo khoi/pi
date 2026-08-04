@@ -14,6 +14,7 @@ This repo uses a `package.json` Pi manifest so one install can expose local Pi r
 Included resources:
 
 - `extensions/ask_user_question`
+- `extensions/reload-runtime` — `/reload-runtime` command plus LLM-callable `reload_runtime` tool
 - `extensions/system-theme`
 - `themes/zenbones-dark.json`
 - `themes/zenbones-light.json`
