@@ -141,9 +141,10 @@ export default function minimalUi(pi: ExtensionAPI) {
 				.join(" ");
 			const path = theme.fg("muted", sanitize(shortenHome(ctx.cwd)));
 			const git = branch ? theme.fg("accent", ` (${sanitize(branch)})`) : "";
+			const model = theme.fg("muted", sanitize(ctx.model?.id ?? "no model"));
 			return {
 				topLeft: activity || undefined,
-				topRight: theme.fg(THINKING_COLORS[level] ?? "muted", level),
+				topRight: `${model} · ${theme.fg(THINKING_COLORS[level] ?? "muted", level)}`,
 				bottomRight: path + git,
 			};
 		};
