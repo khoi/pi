@@ -1,29 +1,105 @@
-import { basename } from "node:path";
+import { homedir } from "node:os";
 
 import { CustomEditor, type ExtensionAPI, type Theme } from "@earendil-works/pi-coding-agent";
 import type { Component, TUI } from "@earendil-works/pi-tui";
-import { truncateToWidth } from "@earendil-works/pi-tui";
+import { truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
 
 import { registerCompactTools } from "./tools.js";
 
 const unsafeTerminalCharacters = /[\u0000-\u001f\u007f-\u009f\u202a-\u202e\u2066-\u2069]/g;
 const sanitize = (text: string): string => text.replace(unsafeTerminalCharacters, "");
 
+const ANSI_PATTERN = /\x1b\[[0-9;]*m/g;
+
 const SPINNER_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
 const SPINNER_INTERVAL_MS = 80;
 
-class StatusLine implements Component {
-	private text = "";
+type FgColor = Parameters<Theme["fg"]>[0];
 
-	setText(text: string): void {
-		this.text = text;
-	}
+const THINKING_COLORS: Record<string, FgColor> = {
+	off: "thinkingOff",
+	minimal: "thinkingMinimal",
+	low: "thinkingLow",
+	medium: "thinkingMedium",
+	high: "thinkingHigh",
+	xhigh: "thinkingXhigh",
+	max: "thinkingMax",
+};
+
+interface EditorLabels {
+	topLeft?: string;
+	topRight?: string;
+	bottomRight?: string;
+}
+
+const isBorderLine = (line: string): boolean => {
+	const plain = line.replace(ANSI_PATTERN, "");
+	return /^─+$/.test(plain) || /^─+ [↑↓] \d+ more ─+$/.test(plain);
+};
+
+const scrollHint = (line: string | undefined): string | undefined => {
+	if (!line) return undefined;
+	return line.replace(ANSI_PATTERN, "").match(/[↑↓] \d+ more/)?.[0];
+};
+
+const shortenHome = (path: string): string => {
+	const home = homedir();
+	if (path === home) return "~";
+	return path.startsWith(`${home}/`) ? `~${path.slice(home.length)}` : path;
+};
+
+class BoxedEditor extends CustomEditor {
+	labels: () => EditorLabels = () => ({});
 
 	render(width: number): string[] {
-		return width > 0 ? [truncateToWidth(this.text, width, "…")] : [];
+		if (width < 8) return super.render(width);
+		const inner = super.render(width - 2);
+		const labels = this.labels();
+
+		let bottomIndex = inner.length - 1;
+		if (this.isShowingAutocomplete()) {
+			const found = inner.findLastIndex(isBorderLine);
+			if (found > 0) bottomIndex = found;
+		}
+
+		const topHint = scrollHint(inner[0]);
+		const bottomHint = bottomIndex > 0 ? scrollHint(inner[bottomIndex]) : undefined;
+		const topLeft =
+			[topHint ? this.borderColor(topHint) : "", labels.topLeft].filter(Boolean).join(" ") || undefined;
+		const bottomRight =
+			[labels.bottomRight, bottomHint ? this.borderColor(bottomHint) : ""].filter(Boolean).join(" ") ||
+			undefined;
+
+		const side = this.borderColor("│");
+		const lines: string[] = [this.buildBorder(width, "╭", "╮", topLeft, labels.topRight)];
+		for (let i = 1; i < inner.length; i++) {
+			if (i === bottomIndex) continue;
+			lines.push(`${side}${inner[i]}${side}`);
+		}
+		lines.push(this.buildBorder(width, "╰", "╯", undefined, bottomRight));
+		return lines;
 	}
 
-	invalidate(): void {}
+	private buildBorder(width: number, left: string, right: string, leftLabel?: string, rightLabel?: string): string {
+		let leftWidth = leftLabel ? visibleWidth(leftLabel) + 3 : 0;
+		let rightWidth = rightLabel ? visibleWidth(rightLabel) + 3 : 0;
+		if (width - 2 - leftWidth - rightWidth < 1 && rightLabel) {
+			rightLabel = truncateToWidth(rightLabel, Math.max(1, width - 6 - leftWidth), "…");
+			rightWidth = visibleWidth(rightLabel) + 3;
+		}
+		if (width - 2 - leftWidth - rightWidth < 1 && leftLabel) {
+			leftLabel = truncateToWidth(leftLabel, Math.max(1, width - 6 - rightWidth), "…");
+			leftWidth = visibleWidth(leftLabel) + 3;
+		}
+		const fill = "─".repeat(Math.max(0, width - 2 - leftWidth - rightWidth));
+		return (
+			this.borderColor(left + (leftLabel ? "─" : "")) +
+			(leftLabel ? ` ${leftLabel} ` : "") +
+			this.borderColor(fill) +
+			(rightLabel ? ` ${rightLabel} ` : "") +
+			this.borderColor((rightLabel ? "─" : "") + right)
+		);
+	}
 }
 
 class EmptyFooter implements Component {
@@ -51,28 +127,25 @@ export default function minimalUi(pi: ExtensionAPI) {
 		let failed = 0;
 		let branch: string | undefined;
 
-		const status = new StatusLine();
-		const model = new StatusLine();
-
 		const redraw = () => tui?.requestRender();
 
-		const renderStatus = () => {
-			if (!theme) return;
-			const directory = theme.fg("success", sanitize(basename(ctx.cwd)));
-			const git = branch ? ` (${theme.fg("accent", sanitize(branch))})` : "";
-			const counts = [
+		const getLabels = (): EditorLabels => {
+			if (!theme) return {};
+			const level = sanitize(pi.getThinkingLevel());
+			const activity = [
+				working ? theme.fg("accent", SPINNER_FRAMES[spinnerFrame] ?? "") : "",
 				succeeded > 0 ? theme.fg("success", `✓${succeeded}`) : "",
 				failed > 0 ? theme.fg("error", `✕${failed}`) : "",
 			]
 				.filter(Boolean)
 				.join(" ");
-			const spinner = working ? ` ${theme.fg("accent", SPINNER_FRAMES[spinnerFrame] ?? "")}` : "";
-			status.setText(`${directory}${git}${counts ? ` ${counts}` : ""}${spinner}`);
-		};
-
-		const renderModel = () => {
-			if (!theme) return;
-			model.setText(theme.fg("muted", `${sanitize(ctx.model?.id ?? "no model")} · ${pi.getThinkingLevel()}`));
+			const path = theme.fg("muted", sanitize(shortenHome(ctx.cwd)));
+			const git = branch ? theme.fg("accent", ` (${sanitize(branch)})`) : "";
+			return {
+				topLeft: activity || undefined,
+				topRight: theme.fg(THINKING_COLORS[level] ?? "muted", level),
+				bottomRight: path + git,
+			};
 		};
 
 		const startSpinner = () => {
@@ -81,7 +154,6 @@ export default function minimalUi(pi: ExtensionAPI) {
 			if (spinnerTimer) clearInterval(spinnerTimer);
 			spinnerTimer = setInterval(() => {
 				spinnerFrame = (spinnerFrame + 1) % SPINNER_FRAMES.length;
-				renderStatus();
 				redraw();
 			}, SPINNER_INTERVAL_MS);
 		};
@@ -92,12 +164,12 @@ export default function minimalUi(pi: ExtensionAPI) {
 			spinnerTimer = undefined;
 		};
 
-		ctx.ui.setFooter((_tui, _footerTheme, footerData) => {
+		ctx.ui.setFooter((instance, footerTheme, footerData) => {
+			tui = instance;
+			theme = footerTheme;
 			branch = footerData.getGitBranch() ?? undefined;
-			renderStatus();
 			const unsubscribe = footerData.onBranchChange(() => {
 				branch = footerData.getGitBranch() ?? undefined;
-				renderStatus();
 				redraw();
 			});
 			return Object.assign(new EmptyFooter(), {
@@ -107,28 +179,6 @@ export default function minimalUi(pi: ExtensionAPI) {
 			});
 		});
 
-		ctx.ui.setWidget(
-			"minimal-status",
-			(instance, widgetTheme) => {
-				tui = instance;
-				theme = widgetTheme;
-				renderStatus();
-				return status;
-			},
-			{ placement: "aboveEditor" },
-		);
-
-		ctx.ui.setWidget(
-			"minimal-model",
-			(instance, widgetTheme) => {
-				tui = instance;
-				theme = widgetTheme;
-				renderModel();
-				return model;
-			},
-			{ placement: "belowEditor" },
-		);
-
 		ctx.ui.setEditorComponent((instance, editorTheme, keybindings) => {
 			tui = instance;
 			if (clearOnEditorMount) {
@@ -136,7 +186,9 @@ export default function minimalUi(pi: ExtensionAPI) {
 				instance.terminal.clearScreen();
 				instance.requestRender(true);
 			}
-			return new CustomEditor(instance, editorTheme, keybindings, { paddingX: 2 });
+			const editor = new BoxedEditor(instance, editorTheme, keybindings, { paddingX: 2 });
+			editor.labels = getLabels;
+			return editor;
 		});
 
 		pi.on("agent_start", () => {
@@ -144,27 +196,25 @@ export default function minimalUi(pi: ExtensionAPI) {
 			succeeded = 0;
 			failed = 0;
 			startSpinner();
-			renderStatus();
 			redraw();
 		});
 
 		pi.on("tool_execution_end", (event) => {
 			if (event.isError) failed++;
 			else succeeded++;
-			renderStatus();
 			redraw();
 		});
 
 		pi.on("agent_end", () => {
 			stopSpinner();
-			renderStatus();
 			redraw();
 		});
 
+		pi.on("thinking_level_select", redraw);
+		pi.on("model_select", redraw);
+
 		pi.on("session_shutdown", () => {
 			stopSpinner();
-			ctx.ui.setWidget("minimal-status", undefined);
-			ctx.ui.setWidget("minimal-model", undefined);
 			ctx.ui.setFooter(undefined);
 			ctx.ui.setEditorComponent(undefined);
 			tui = undefined;
