@@ -144,7 +144,7 @@ export default function minimalUi(pi: ExtensionAPI) {
 				if (streamStartTime && streamChars > 0) {
 					const elapsed = (Date.now() - streamStartTime) / 1000;
 					if (elapsed > 0.5) {
-						const tokens = streamChars / 4;
+						const tokens = streamChars * 0.35;
 						const tps = tokens / elapsed;
 						label += ` ${tps.toFixed(1)} nt/s`;
 					}
