@@ -14,6 +14,8 @@ const ANSI_PATTERN = /\x1b\[[0-9;]*m/g;
 const SPINNER_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
 const SPINNER_INTERVAL_MS = 80;
 
+const MIN_CONTENT_LINES = 3;
+
 type FgColor = Parameters<Theme["fg"]>[0];
 
 const THINKING_COLORS: Record<string, FgColor> = {
@@ -27,8 +29,8 @@ const THINKING_COLORS: Record<string, FgColor> = {
 };
 
 interface EditorLabels {
-	topLeft?: string;
 	topRight?: string;
+	bottomLeft?: string;
 	bottomRight?: string;
 }
 
@@ -64,19 +66,24 @@ class BoxedEditor extends CustomEditor {
 
 		const topHint = scrollHint(inner[0]);
 		const bottomHint = bottomIndex > 0 ? scrollHint(inner[bottomIndex]) : undefined;
-		const topLeft =
-			[topHint ? this.borderColor(topHint) : "", labels.topLeft].filter(Boolean).join(" ") || undefined;
-		const bottomRight =
-			[labels.bottomRight, bottomHint ? this.borderColor(bottomHint) : ""].filter(Boolean).join(" ") ||
+		const topLeft = topHint ? this.borderColor(topHint) : undefined;
+		const bottomLeft =
+			[labels.bottomLeft, bottomHint ? this.borderColor(bottomHint) : ""].filter(Boolean).join(" ") ||
 			undefined;
 
 		const side = this.borderColor("│");
 		const lines: string[] = [this.buildBorder(width, "╭", "╮", topLeft, labels.topRight)];
-		for (let i = 1; i < inner.length; i++) {
-			if (i === bottomIndex) continue;
+		for (let i = 1; i < bottomIndex; i++) {
 			lines.push(`${side}${inner[i]}${side}`);
 		}
-		lines.push(this.buildBorder(width, "╰", "╯", undefined, bottomRight));
+		const blank = `${side}${" ".repeat(width - 2)}${side}`;
+		for (let i = bottomIndex - 1; i < MIN_CONTENT_LINES; i++) {
+			lines.push(blank);
+		}
+		lines.push(this.buildBorder(width, "╰", "╯", bottomLeft, labels.bottomRight));
+		for (let i = bottomIndex + 1; i < inner.length; i++) {
+			lines.push(`${side}${inner[i]}${side}`);
+		}
 		return lines;
 	}
 
@@ -110,6 +117,22 @@ class EmptyFooter implements Component {
 	invalidate(): void {}
 }
 
+class BottomAnchor {
+	private height = 0;
+
+	constructor(private readonly tui: TUI) {}
+
+	render(): string[] {
+		const rows = this.tui.terminal.rows;
+		const previous = (this.tui as { previousLines?: unknown }).previousLines;
+		const others = Array.isArray(previous) ? previous.length - this.height : 0;
+		this.height = Math.max(0, rows - others);
+		return Array.from({ length: this.height }, () => "");
+	}
+
+	invalidate(): void {}
+}
+
 export default function minimalUi(pi: ExtensionAPI) {
 	registerCompactTools(pi);
 
@@ -123,8 +146,6 @@ export default function minimalUi(pi: ExtensionAPI) {
 		let spinnerTimer: ReturnType<typeof setInterval> | undefined;
 		let spinnerFrame = 0;
 		let working = false;
-		let succeeded = 0;
-		let failed = 0;
 		let branch: string | undefined;
 
 		const redraw = () => tui?.requestRender();
@@ -132,20 +153,13 @@ export default function minimalUi(pi: ExtensionAPI) {
 		const getLabels = (): EditorLabels => {
 			if (!theme) return {};
 			const level = sanitize(pi.getThinkingLevel());
-			const activity = [
-				working ? theme.fg("accent", SPINNER_FRAMES[spinnerFrame] ?? "") : "",
-				succeeded > 0 ? theme.fg("success", `✓${succeeded}`) : "",
-				failed > 0 ? theme.fg("error", `✕${failed}`) : "",
-			]
-				.filter(Boolean)
-				.join(" ");
 			const path = theme.fg("muted", sanitize(shortenHome(ctx.cwd)));
 			const git = branch ? theme.fg("accent", ` (${sanitize(branch)})`) : "";
 			const model = theme.fg("muted", sanitize(ctx.model?.id ?? "no model"));
 			const usage = ctx.getContextUsage();
 			const context = usage?.percent != null ? theme.fg("muted", ` · ${Math.round(usage.percent)}%`) : "";
 			return {
-				topLeft: activity || undefined,
+				bottomLeft: working ? theme.fg("accent", SPINNER_FRAMES[spinnerFrame] ?? "") : undefined,
 				topRight: `${model} · ${theme.fg(THINKING_COLORS[level] ?? "muted", level)}${context}`,
 				bottomRight: path + git,
 			};
@@ -182,6 +196,8 @@ export default function minimalUi(pi: ExtensionAPI) {
 			});
 		});
 
+		ctx.ui.setWidget("bottom-anchor", (instance) => new BottomAnchor(instance), { placement: "aboveEditor" });
+
 		ctx.ui.setEditorComponent((instance, editorTheme, keybindings) => {
 			tui = instance;
 			if (clearOnEditorMount) {
@@ -196,15 +212,7 @@ export default function minimalUi(pi: ExtensionAPI) {
 
 		pi.on("agent_start", () => {
 			ctx.ui.setWorkingVisible(false);
-			succeeded = 0;
-			failed = 0;
 			startSpinner();
-			redraw();
-		});
-
-		pi.on("tool_execution_end", (event) => {
-			if (event.isError) failed++;
-			else succeeded++;
 			redraw();
 		});
 
@@ -219,6 +227,7 @@ export default function minimalUi(pi: ExtensionAPI) {
 
 		pi.on("session_shutdown", () => {
 			stopSpinner();
+			ctx.ui.setWidget("bottom-anchor", undefined);
 			ctx.ui.setFooter(undefined);
 			ctx.ui.setEditorComponent(undefined);
 			tui = undefined;
