@@ -211,8 +211,9 @@ export default function minimalUi(pi: ExtensionAPI) {
 		});
 
 		pi.on("message_update", (event) => {
-			if (event.assistantMessageEvent.type === "text_delta") {
-				streamChars += event.assistantMessageEvent.delta.length;
+			const e = event.assistantMessageEvent;
+			if ("delta" in e && typeof e.delta === "string") {
+				streamChars += e.delta.length;
 				redraw();
 			}
 		});
