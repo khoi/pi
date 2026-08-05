@@ -155,7 +155,8 @@ export default function minimalUi(pi: ExtensionAPI) {
 			const level = sanitize(pi.getThinkingLevel());
 			const path = theme.fg("muted", sanitize(shortenHome(ctx.cwd)));
 			const git = branch ? theme.fg("accent", ` (${sanitize(branch)})`) : "";
-			const model = theme.fg("muted", sanitize(ctx.model?.id ?? "no model"));
+			const modelId = ctx.model?.id.split("/").at(-1) ?? "no model";
+			const model = theme.fg("muted", sanitize(modelId));
 			const usage = ctx.getContextUsage();
 			const context = usage?.percent != null ? theme.fg("muted", ` · ${Math.round(usage.percent)}%`) : "";
 			return {
