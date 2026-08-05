@@ -142,9 +142,11 @@ export default function minimalUi(pi: ExtensionAPI) {
 			const path = theme.fg("muted", sanitize(shortenHome(ctx.cwd)));
 			const git = branch ? theme.fg("accent", ` (${sanitize(branch)})`) : "";
 			const model = theme.fg("muted", sanitize(ctx.model?.id ?? "no model"));
+			const usage = ctx.getContextUsage();
+			const context = usage?.percent != null ? theme.fg("muted", ` · ${Math.round(usage.percent)}%`) : "";
 			return {
 				topLeft: activity || undefined,
-				topRight: `${model} · ${theme.fg(THINKING_COLORS[level] ?? "muted", level)}`,
+				topRight: `${model} · ${theme.fg(THINKING_COLORS[level] ?? "muted", level)}${context}`,
 				bottomRight: path + git,
 			};
 		};
@@ -213,6 +215,7 @@ export default function minimalUi(pi: ExtensionAPI) {
 
 		pi.on("thinking_level_select", redraw);
 		pi.on("model_select", redraw);
+		pi.on("message_end", redraw);
 
 		pi.on("session_shutdown", () => {
 			stopSpinner();
