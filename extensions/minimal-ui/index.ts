@@ -123,6 +123,8 @@ export default function minimalUi(pi: ExtensionAPI) {
 		let spinnerFrame = 0;
 		let working = false;
 		let branch: string | undefined;
+		let streamStartTime: number | undefined;
+		let streamChars = 0;
 
 		const redraw = () => tui?.requestRender();
 
@@ -135,8 +137,23 @@ export default function minimalUi(pi: ExtensionAPI) {
 			const model = theme.fg("muted", sanitize(modelId));
 			const usage = ctx.getContextUsage();
 			const context = usage?.percent != null ? theme.fg("muted", ` · ${Math.round(usage.percent)}%`) : "";
+
+			let left: string | undefined;
+			if (working) {
+				let label = SPINNER_FRAMES[spinnerFrame] ?? "";
+				if (streamStartTime && streamChars > 0) {
+					const elapsed = (Date.now() - streamStartTime) / 1000;
+					if (elapsed > 0.5) {
+						const tokens = streamChars / 4;
+						const tps = tokens / elapsed;
+						label += ` ${tps.toFixed(1)} nt/s`;
+					}
+				}
+				left = theme.fg("accent", label);
+			}
+
 			return {
-				bottomLeft: working ? theme.fg("accent", SPINNER_FRAMES[spinnerFrame] ?? "") : undefined,
+				bottomLeft: left,
 				topRight: `${model} · ${theme.fg(THINKING_COLORS[level] ?? "muted", level)}${context}`,
 				bottomRight: path + git,
 			};
@@ -187,12 +204,23 @@ export default function minimalUi(pi: ExtensionAPI) {
 
 		pi.on("agent_start", () => {
 			ctx.ui.setWorkingVisible(false);
+			streamStartTime = Date.now();
+			streamChars = 0;
 			startSpinner();
 			redraw();
 		});
 
+		pi.on("message_update", (event) => {
+			if (event.assistantMessageEvent.type === "text_delta") {
+				streamChars += event.assistantMessageEvent.delta.length;
+				redraw();
+			}
+		});
+
 		pi.on("agent_end", () => {
 			stopSpinner();
+			streamStartTime = undefined;
+			streamChars = 0;
 			redraw();
 		});
 
@@ -202,6 +230,8 @@ export default function minimalUi(pi: ExtensionAPI) {
 
 		pi.on("session_shutdown", () => {
 			stopSpinner();
+			streamStartTime = undefined;
+			streamChars = 0;
 			ctx.ui.setFooter(undefined);
 			ctx.ui.setEditorComponent(undefined);
 			tui = undefined;
