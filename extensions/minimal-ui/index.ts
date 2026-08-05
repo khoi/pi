@@ -14,8 +14,6 @@ const ANSI_PATTERN = /\x1b\[[0-9;]*m/g;
 const SPINNER_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
 const SPINNER_INTERVAL_MS = 80;
 
-const MIN_CONTENT_LINES = 3;
-
 type FgColor = Parameters<Theme["fg"]>[0];
 
 const THINKING_COLORS: Record<string, FgColor> = {
@@ -73,17 +71,11 @@ class BoxedEditor extends CustomEditor {
 
 		const side = this.borderColor("│");
 		const lines: string[] = [this.buildBorder(width, "╭", "╮", topLeft, labels.topRight)];
-		for (let i = 1; i < bottomIndex; i++) {
+		for (let i = 1; i < inner.length; i++) {
+			if (i === bottomIndex) continue;
 			lines.push(`${side}${inner[i]}${side}`);
-		}
-		const blank = `${side}${" ".repeat(width - 2)}${side}`;
-		for (let i = bottomIndex - 1; i < MIN_CONTENT_LINES; i++) {
-			lines.push(blank);
 		}
 		lines.push(this.buildBorder(width, "╰", "╯", bottomLeft, labels.bottomRight));
-		for (let i = bottomIndex + 1; i < inner.length; i++) {
-			lines.push(`${side}${inner[i]}${side}`);
-		}
 		return lines;
 	}
 
@@ -112,22 +104,6 @@ class BoxedEditor extends CustomEditor {
 class EmptyFooter implements Component {
 	render(): string[] {
 		return [];
-	}
-
-	invalidate(): void {}
-}
-
-class BottomAnchor {
-	private height = 0;
-
-	constructor(private readonly tui: TUI) {}
-
-	render(): string[] {
-		const rows = this.tui.terminal.rows;
-		const previous = (this.tui as { previousLines?: unknown }).previousLines;
-		const others = Array.isArray(previous) ? previous.length - this.height : 0;
-		this.height = Math.max(0, rows - others);
-		return Array.from({ length: this.height }, () => "");
 	}
 
 	invalidate(): void {}
@@ -197,8 +173,6 @@ export default function minimalUi(pi: ExtensionAPI) {
 			});
 		});
 
-		ctx.ui.setWidget("bottom-anchor", (instance) => new BottomAnchor(instance), { placement: "aboveEditor" });
-
 		ctx.ui.setEditorComponent((instance, editorTheme, keybindings) => {
 			tui = instance;
 			if (clearOnEditorMount) {
@@ -228,7 +202,6 @@ export default function minimalUi(pi: ExtensionAPI) {
 
 		pi.on("session_shutdown", () => {
 			stopSpinner();
-			ctx.ui.setWidget("bottom-anchor", undefined);
 			ctx.ui.setFooter(undefined);
 			ctx.ui.setEditorComponent(undefined);
 			tui = undefined;
